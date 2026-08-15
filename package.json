@@ -1,7 +1,7 @@
 {
 	"name": "dsh-model-sync",
-	"version": "0.1.0",
-	"description": "Sync live provider model lists into DSH settings and show 5h/7d quota rings for the current session model.",
+	"version": "0.1.5",
+	"description": "Write live provider model lists into DSH settings. Composer rings show 5h/7d windows or metered balance for the current session model.",
 	"type": "module",
 	"license": "MIT",
 	"author": "jiay98528-dev",
@@ -34,6 +34,7 @@
 		"cordis.patch.yml",
 		"README.md",
 		"README.zh.md",
+		"CHANGELOG.md",
 		"LICENSE"
 	],
 	"publishConfig": {

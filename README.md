@@ -16,87 +16,80 @@
 </p>
 
 <p align="center">
-  Sync live provider model lists into DeepSeek Harness settings, and show <b>5-hour / 7-day</b> quota rings beside the composer for the <b>current session model</b> only.
+  Writes each provider's live model list into DeepSeek Harness settings. The composer ring tracks the model this session is using. Plan routes show 5h and 7d windows. Metered routes show remaining balance against the last top-up.
 </p>
 
 <p align="center">
   <img src="assets/banner.svg" alt="dsh-model-sync banner" width="100%">
 </p>
 
-Settings → **模型同步** lists every configured provider: enable/disable this plugin, discover new model ids, apply them, inspect quotas. The composer rings follow only the model this conversation is using. Full provider detail stays on the settings page.
+Two settings pages. **Model Sync** (refresh icon) finds new model ids and writes them. **Usage** (list icon) lists windows, cumulative counts, and API balance. Resets are countdowns such as `2d 3h left`. 5h and 7d each get their own row. The ring sits right of the model name and left of the context meter.
 
 ## Screenshots
 
-**Settings — discover and apply new models**
+| | 中文 | English |
+|---|---|---|
+| Model Sync | ![Settings ZH](assets/demo-settings-zh.png) | ![Settings EN](assets/demo-settings-en.png) |
+| Usage | ![Usage ZH](assets/demo-usage-zh.png) | ![Usage EN](assets/demo-usage-en.png) |
+| Composer | ![Composer ZH](assets/demo-composer-zh.png) | ![Composer EN](assets/demo-composer-en.png) |
 
-![Settings page](assets/demo-settings.png)
-
-**Composer — hover the rings for the current `provider / model`**
-
-![Composer quota rings](assets/demo-composer.png)
-
-Inner ring = 5 hours. Outer ring = 7 days. Hover title is `provider / model`. Pay-as-you-go balances use last recharge as 100% vs current remaining.
+One quota draws one ring. Both 5h and 7d draw two rings, inner 5h, outer 7d. Color follows remaining fraction, dark red at 0%, green at 75%, sky or navy at 100%. When a provider has plan windows and a top-up pack, the icon draws the windows. The pack stays in the hover card.
 
 ## Install
-
-npm (preferred — prebuilt, no `allowBuilds`):
 
 ```sh
 dsh plugin --profile web add dsh-model-sync
 ```
 
-GitHub (also ships `lib/`, no `allowBuilds`):
+The GitHub source also ships prebuilt `lib/`. No `allowBuilds`.
 
 ```sh
 dsh plugin --profile web add github:jiay98528-dev/dsh-model-sync
 ```
 
-Then restart `dsh web` and refresh the page. Open **Settings → 模型同步**.
+Restart `dsh web`, refresh the page, open **Settings → Model Sync**.
 
-The package declares `dsh.bundle` (`cordis.patch.yml`) and `dsh.client.immediately: true`, so the settings section and composer rings mount without another plugin injecting them.
+The package declares `dsh.bundle` and `dsh.client.immediately: true`.
 
 ## Usage
 
-### 1. Settings page
+### Model Sync
 
-1. Start `dsh web` and open **Settings**.
-2. Open the **模型同步** section in the left nav.
-3. Click **刷新** if the list is empty.
-4. Each provider card shows:
-   - `id` and `baseURL`
-   - discovered model chips (blue outline = new, not yet in settings)
-   - **应用 N 个新模型** to write those ids into `llm-pi-ai.providers.<id>.models`
-   - quota / balance text, or a short reason when the provider has no public window API
-5. The top card toggles **模型同步** and optional **订阅制模型接入** (`sub-model-access`) by writing `disabled` on the matching profile row. That change is hot.
+1. **Settings → Model Sync**.
+2. **Refresh** if the list is empty.
+3. Each card shows provider id, `baseURL`, and model chips. Blue outline means the id is not in settings yet. **Apply N new models** writes them to `llm-pi-ai.providers.<id>.models`.
+4. **Enable plugins** (collapsed) toggles this plugin and optional `sub-model-access`. Takes effect live.
 
-Catalog-only protocols (MiniMax, Kimi Coding, OpenAI Codex) do not speak OpenAI `GET /models`. The plugin falls back to known catalog ids instead of painting a red “this protocol has no /models listing” error.
+MiniMax, Kimi Coding, and OpenAI Codex have no OpenAI `/models`. The plugin uses the catalog ids.
 
-### 2. Composer rings
+### Usage
 
-1. Open any conversation and pick a model as usual.
-2. A dual ring appears to the left of the model name in the composer.
-3. Hover (or focus) it. The card title is `provider / model` for **this session only**.
-4. Switching the session model updates the ring. Other providers stay on the settings page.
+1. **Settings → Usage**.
+2. Each provider shows 5h and 7d remaining percent, vendor cumulative counts, a reset countdown, and a colored bar. The two windows never share a line.
+3. Metered rows show `current / baseline`. The first sample becomes the baseline. To match spend that already happened, use **Use current balance as baseline**.
 
-If the hover card says the current model is not recognized, the session provider is not in the discovered list yet — open Settings and refresh.
+### Composer rings
 
-### 3. Quota sources
+1. Pick a model as usual.
+2. The ring is right of the model name and left of the context meter.
+3. Hover title is `provider / model` for this session. Each window is its own row, for example `5 hours    left 100% · 2h 15m left`.
+4. Change the session model and the ring follows. Other providers stay on Usage.
 
-| Provider | What you see | Endpoint |
+## Quota sources
+
+| Provider | Icon | Source |
 |---|---|---|
-| `openai-codex` | 5h / 7d utilization | `chatgpt.com/backend-api/wham/usage` |
-| `kimi-coding` | 5h / 7d utilization | `api.kimi.com/coding/v1/usages` |
-| `zai` | 5h / 7d utilization | `api.z.ai/api/monitor/usage/quota/limit` |
-| `minimax-cn` | 5h / 7d remaining | `api.minimaxi.com/v1/api/openplatform/coding_plan/remains` |
-| `deepseek-official` | balance vs last recharge | `api.deepseek.com/user/balance` |
-| `xai` | reason only | grok.com gRPC billing is not ported yet |
-| others | reason only | no public plan window |
+| `openai-codex` | 5h / 7d | `chatgpt.com/backend-api/wham/usage` |
+| `kimi-coding` | 5h / 7d, top-up pack in the hover card | `api.kimi.com/coding/v1/usages` |
+| `zai` | 5h / 7d | `api.z.ai/api/monitor/usage/quota/limit` |
+| `minimax-cn` | 5h / 7d | `api.minimaxi.com/v1/api/openplatform/coding_plan/remains` |
+| `xai` | 7d | grok.com gRPC-web, ported from CC Switch |
+| `deepseek-official` | balance vs last top-up | `api.deepseek.com/user/balance` |
+| `xiaomi` | no window data | no public plan API |
 
-Plan percentages come from the same family of APIs as [CC Switch](https://github.com/farion1231/cc-switch). Remaining % = `100 − used`. Zhipu (`zai`) must send the raw key in `Authorization` (no `Bearer `). Codex also reads `tokens.account_id` from `~/.codex/auth.json` when present.
+DeepSeek metered baseline is `$DSH_HOME/profiles/<profile>/model-sync.baseline.json`. A reading above the stored baseline is a top-up.
 
 ## Config
-
-Override the bundle row in your profile `cordis.patch.yml` by id `model-sync`:
 
 ```yaml
 - id: model-sync
@@ -109,13 +102,14 @@ Override the bundle row in your profile `cordis.patch.yml` by id `model-sync`:
 | Field | Default | Meaning |
 |---|---|---|
 | `profile` | `web` | Which `$DSH_HOME/profiles/<name>` to read and write |
-| `pollMs` | `60000` | Quota refresh interval (minimum `5000`) |
+| `pollMs` | `60000` | Quota refresh interval, minimum `5000` |
 
 ## Notes
 
-- Host code lives under `node_modules`. After you change and rebuild this package, restart `dsh web`. A page refresh is enough for client-only edits.
-- Quota calls use credentials already stored in DSH. Tokens are not logged and are only sent to that provider’s own quota API.
-- Installing a plugin runs third-party code with your permissions. Read the source before you install it on a machine that holds keys.
+- Host code lives under `node_modules`. After you change and rebuild this package, restart `dsh web`. Client-only edits need a page refresh.
+- Quota calls use credentials already stored in DSH.
+- Ring placement is bound to DSH 0.1.0-rc.6 composer class names.
+- Changelog is [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

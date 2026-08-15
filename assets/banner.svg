@@ -22,5 +22,5 @@
   </g>
   <text x="308" y="188" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="56" font-weight="700" fill="#111827">dsh-model-sync</text>
   <text x="308" y="236" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="26" fill="#4D6BFE">模型同步</text>
-  <text x="308" y="286" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="22" fill="#5B6475">Live model lists into DSH settings. 5h / 7d rings for the current session model.</text>
+  <text x="308" y="286" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="22" fill="#5B6475">Live /models into settings. 5h and 7d rings for the session model.</text>
 </svg>

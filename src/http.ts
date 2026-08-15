@@ -12,7 +12,7 @@ import {
 	type SyncState,
 } from './domain.js';
 import { readPluginEnabled, setEntryEnabled } from './patch.js';
-import { collectQuota } from './quota.js';
+import { collectQuota, resetBaseline } from './quota.js';
 
 interface WebServer {
 	register(route: { kind: 'exact' | 'prefix'; path: string; handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void> }): () => void;
@@ -35,6 +35,12 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
 	return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
+function deepseekApiKeyEnv(ctx: Context): string {
+	const settings = ctx.get('settings');
+	const section = settings?.get(settingsNamespace('llm-deepseek')) as { apiKeyEnv?: string } | undefined;
+	return section?.apiKeyEnv ?? 'DEEPSEEK_API_KEY';
+}
+
 async function buildState(ctx: Context, config: ModelSyncConfig): Promise<SyncState> {
 	const enabled = readPluginEnabled(config.profile);
 	const listings = await listAllProviders(ctx);
@@ -55,13 +61,12 @@ async function buildState(ctx: Context, config: ModelSyncConfig): Promise<SyncSt
 	}
 	// deepseek-official lives on the llm-deepseek route, not in llm-pi-ai
 	// providers, yet it is the pay-as-you-go API model users pay per call.
-	const deepseekSection = settings?.get(settingsNamespace('llm-deepseek')) as { apiKeyEnv?: string } | undefined;
 	providers.push({
 		id: 'deepseek-official',
 		baseURL: 'https://api.deepseek.com',
 		configuredIds: [],
 		discovered: [],
-		quota: await collectQuota(ctx, 'deepseek-official', deepseekSection?.apiKeyEnv ?? 'DEEPSEEK_API_KEY', config.profile),
+		quota: await collectQuota(ctx, 'deepseek-official', deepseekApiKeyEnv(ctx), config.profile),
 		lastError: undefined,
 	});
 	return {
@@ -116,6 +121,20 @@ export function registerHttp(ctx: Context, config: ModelSyncConfig): () => void 
 						return;
 					}
 					setEntryEnabled(config.profile, body.id, body.enabled);
+					send(res, 200, { ok: true, state: await buildState(ctx, config) });
+					return;
+				}
+				if (req.method === 'POST' && path === `${HTTP_PREFIX}/baseline-reset`) {
+					const body = (await readJson(req)) as { provider?: string };
+					if (!body.provider) {
+						send(res, 400, { error: 'provider required' });
+						return;
+					}
+					const result = await resetBaseline(ctx, body.provider, deepseekApiKeyEnv(ctx), config.profile);
+					if (!result.ok) {
+						send(res, 502, { error: result.error ?? 'baseline reset failed' });
+						return;
+					}
 					send(res, 200, { ok: true, state: await buildState(ctx, config) });
 					return;
 				}

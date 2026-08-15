@@ -16,87 +16,80 @@
 </p>
 
 <p align="center">
-  把各提供方线上模型列表同步进 DeepSeek Harness 设置，并在输入框旁显示 <b>5 小时 / 7 天</b>额度圆环。对话里的圆环只跟<b>当前会话正在用的模型</b>。
+  把各提供方线上模型列表写进 DeepSeek Harness 的 settings。输入框圆环只跟当前会话正在用的那个模型，读套餐的 5 小时和 7 天窗口。按量线路读相对上次充值还剩多少。
 </p>
 
 <p align="center">
   <img src="assets/banner.svg" alt="dsh-model-sync 横幅" width="100%">
 </p>
 
-设置 → **模型同步** 展示全部已配置提供方：启停本插件、发现并写入新模型、查看各家额度。输入框旁的圆环只标注当前会话模型；全部家底仍在设置页。
+设置里两页。**模型同步**发现新模型 id 并写入，导航是同步箭头。**用量详情**列出各家窗口、累计次数和 API 余额，导航是清单。重置写成倒计时，例如 `2 天 3 小时后重置`。5 小时和 7 天各占一行。圆环在模型名右侧、上下文进度条左侧。
 
 ## 效果
 
-**设置页：发现并一键写入新模型**
+| | 中文 | English |
+|---|---|---|
+| 模型同步 | ![设置中文](assets/demo-settings-zh.png) | ![设置英文](assets/demo-settings-en.png) |
+| 用量详情 | ![用量中文](assets/demo-usage-zh.png) | ![用量英文](assets/demo-usage-en.png) |
+| 输入框 | ![圆环中文](assets/demo-composer-zh.png) | ![圆环英文](assets/demo-composer-en.png) |
 
-![设置页](assets/demo-settings.png)
-
-**输入框：悬停圆环查看当前 `提供方 / 模型`**
-
-![输入框额度圆环](assets/demo-composer.png)
-
-内环是 5 小时，外环是 7 天。悬停标题为 `提供方 / 模型`。按量计费用「上次充值 = 100%」对照当前余额。
+一个额度画一环。同时有 5 小时和 7 天就画双环，内环 5 小时，外环 7 天。颜色按剩余比例走，0% 暗红，75% 绿，100% 天蓝或深蓝。窗口和加量包同时在时，图标只画窗口，加量包放在悬停卡。
 
 ## 安装
-
-npm（推荐，预构建，不用开 `allowBuilds`）：
 
 ```sh
 dsh plugin --profile web add dsh-model-sync
 ```
 
-GitHub（同样带 `lib/`，也不用 `allowBuilds`）：
+GitHub 源同样带预构建 `lib/`，不用开 `allowBuilds`。
 
 ```sh
 dsh plugin --profile web add github:jiay98528-dev/dsh-model-sync
 ```
 
-然后重启 `dsh web`，刷新页面，打开 **设置 → 模型同步**。
+重启 `dsh web`，刷新页面，打开 **设置 → 模型同步**。
 
-包已声明 `dsh.bundle`（`cordis.patch.yml`）和 `dsh.client.immediately: true`，设置页和圆环会自己挂上，不依赖别的包 inject。
+包声明了 `dsh.bundle` 和 `dsh.client.immediately: true`。
 
 ## 使用
 
-### 1. 设置页
+### 模型同步
 
-1. 启动 `dsh web`，打开 **设置**。
-2. 左侧点 **模型同步**。
-3. 列表为空就点 **刷新**。
-4. 每个提供方卡片会显示：
-   - `id` 和 `baseURL`
-   - 发现到的模型芯片（蓝框 = 设置里还没有的新 id）
-   - **应用 N 个新模型**：把这些 id 写进 `llm-pi-ai.providers.<id>.models`
-   - 额度 / 余额，或该家没有公开窗口接口时的原因
-5. 顶部开关可启停 **模型同步** 以及可选的 **订阅制模型接入**（`sub-model-access`），写入对应行的 `disabled`，热生效。
+1. **设置 → 模型同步**。
+2. 列表空就点 **刷新**。
+3. 每张卡片给出提供方 id、`baseURL`、模型芯片。蓝框是 settings 里还没有的 id。**应用 N 个新模型**把它们写进 `llm-pi-ai.providers.<id>.models`。
+4. 折叠的 **插件启停** 开关本插件和可选的 `sub-model-access`，热生效。
 
-没有 OpenAI `GET /models` 的协议（MiniMax、Kimi Coding、OpenAI Codex）会回落到 catalog 里的已知 id，不会标成红色「该协议没有 /models 列表」。
+MiniMax、Kimi Coding、OpenAI Codex 没有 OpenAI `/models`，插件用 catalog 里的已知 id。
 
-### 2. 对话圆环
+### 用量详情
 
-1. 打开任意会话，照常选模型。
-2. 输入框模型名左侧会出现双环。
-3. 鼠标悬停或键盘聚焦，卡片标题是**本会话**的 `提供方 / 模型`。
-4. 换模型，圆环跟着变。其它提供方请去设置页看。
+1. **设置 → 用量详情**。
+2. 每家给出 5 小时和 7 天剩余百分比、厂商上报的累计次数、重置倒计时、彩色进度条。两个窗口各占一行。
+3. 按量行写 `当前 / 基准`。首采把当时余额当基准。要把已经花掉的部分算进百分比，点 **以当前余额为基准**。
 
-如果悬停写着尚未识别当前模型，说明这个会话的提供方还不在发现列表里——去设置页刷新一次。
+### 对话圆环
 
-### 3. 额度从哪来
+1. 照常选模型。
+2. 圆环在模型名右侧、上下文进度条左侧。
+3. 悬停标题是本会话的 `提供方 / 模型`。每个窗口单独一行，例如 `5 小时    剩余 100% · 2 小时 15 分后重置`。
+4. 换模型圆环跟着变。其它提供方在用量详情里。
 
-| 提供方 | 圆环数据 | 接口 |
+## 额度从哪来
+
+| 提供方 | 图标 | 接口 |
 |---|---|---|
-| `openai-codex` | 5h / 7d 用量 | `chatgpt.com/backend-api/wham/usage` |
-| `kimi-coding` | 5h / 7d 用量 | `api.kimi.com/coding/v1/usages` |
-| `zai` | 5h / 7d 用量 | `api.z.ai/api/monitor/usage/quota/limit` |
-| `minimax-cn` | 5h / 7d 剩余 | `api.minimaxi.com/v1/api/openplatform/coding_plan/remains` |
+| `openai-codex` | 5h / 7d | `chatgpt.com/backend-api/wham/usage` |
+| `kimi-coding` | 5h / 7d，加量包在悬停卡 | `api.kimi.com/coding/v1/usages` |
+| `zai` | 5h / 7d | `api.z.ai/api/monitor/usage/quota/limit` |
+| `minimax-cn` | 5h / 7d | `api.minimaxi.com/v1/api/openplatform/coding_plan/remains` |
+| `xai` | 7d | grok.com gRPC-web，移植自 CC Switch |
 | `deepseek-official` | 余额对照上次充值 | `api.deepseek.com/user/balance` |
-| `xai` | 只显示原因 | grok.com 的 gRPC 账单尚未接入 |
-| 其它 | 只显示原因 | 还没有公开套餐窗口 |
+| `xiaomi` | 无窗口数据 | 没有公开套餐接口 |
 
-套餐百分比对齐 [CC Switch](https://github.com/farion1231/cc-switch) 的计划接口。剩余 % = `100 − 已用`。智谱（`zai`）的 `Authorization` 必须是裸 key，不要加 `Bearer `。Codex 若本机有 `~/.codex/auth.json`，会读取其中的 `tokens.account_id`。
+DeepSeek 按量基准写在 `$DSH_HOME/profiles/<profile>/model-sync.baseline.json`。读数高于已存基准，按充值处理。
 
 ## 配置
-
-在 profile 的 `cordis.patch.yml` 里按 id `model-sync` 覆盖：
 
 ```yaml
 - id: model-sync
@@ -109,13 +102,14 @@ dsh plugin --profile web add github:jiay98528-dev/dsh-model-sync
 | 字段 | 默认 | 含义 |
 |---|---|---|
 | `profile` | `web` | 读写哪个 `$DSH_HOME/profiles/<name>` |
-| `pollMs` | `60000` | 额度刷新间隔（最小 `5000`） |
+| `pollMs` | `60000` | 额度刷新间隔，最小 `5000` |
 
 ## 说明
 
-- Host 代码在 `node_modules` 里。改完并 `pnpm build` 后必须重启 `dsh web`。只改前端的话，刷新页面即可。
-- 额度请求只用 DSH 里已经存好的凭据。Token 不会打进日志，也只发给该提供方自己的额度接口。
-- 安装插件等于在你的机器上跑第三方代码。装到有密钥的环境前，先看一眼源码。
+- Host 代码在 `node_modules` 里。改完并 `pnpm build` 后重启 `dsh web`。只改前端刷新页面。
+- 额度请求使用 DSH 里已有凭据。
+- 圆环位置绑在 DSH 0.1.0-rc.6 的 composer 类名上。
+- 变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可
 

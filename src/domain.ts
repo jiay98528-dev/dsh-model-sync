@@ -7,10 +7,19 @@ export type QuotaKind = 'window' | 'balance' | 'unavailable';
 export interface QuotaWindow {
 	key: '5h' | '7d' | 'rate';
 	label: string;
+	/** Used percent, 0-100. */
 	used: number;
+	/** Percent base (100 for utilization windows). */
 	limit: number;
+	/** Remaining percent, 0-100. */
 	remaining: number;
 	resetAt: number | undefined;
+	/** Raw cumulative usage when the provider reports counts (requests etc.). */
+	usedRaw?: number;
+	/** Raw window limit accompanying usedRaw. */
+	limitRaw?: number;
+	/** Unit label for raw counts, e.g. '次'. */
+	rawUnit?: string;
 }
 
 /** Pay-as-you-go API credit. Remaining percent = current / lastRecharge. */
@@ -19,8 +28,12 @@ export interface QuotaBalance {
 	current: number;
 	/** Balance right after the last top-up (baseline B0); reset whenever a reading exceeds it. */
 	lastRecharge: number;
-	/** Currency code, e.g. CNY / USD. */
+	/** Unit: currency code (CNY / USD) or a non-currency unit (e.g. points). */
 	unit: string;
+	/** Row label in the quota popup; defaults to "API 余额". */
+	label?: string;
+	/** Unix ms when the baseline was last set (first sight or last top-up / manual reset). */
+	baselineAt?: number;
 }
 
 export interface QuotaSnapshot {
