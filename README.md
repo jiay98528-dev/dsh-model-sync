@@ -53,6 +53,18 @@ Restart `dsh web`, refresh the page, open **Settings → Model Sync**. The plugi
 
 The package ships a cordis.patch.yml bundle patch (`dsh.bundle`) and declares `dsh.client.immediately: true`, so it takes effect on install with no manual config.
 
+## Feature switches
+
+The host plugin stays loaded when either built-in feature is disabled, so its API and both dedicated settings pages remain available. The pages are registered only in the main Settings sidebar, not duplicated under **Settings → Plugins**.
+
+| Control | `cordis.patch.yml` value | When disabled |
+|---|---|---|
+| Model Sync | `model-sync.config.enabled` | Stops live model discovery and model writes; Usage keeps working |
+| Model usage queries | `model-sync.config.usageEnabled` | Stops quota requests and baseline resets, and hides composer rings; Model Sync keeps working |
+| Optional `sub-model-access` | `sub-model-access.disabled` | Unloads only that optional plugin |
+
+`sub-model-access` is optional. If its bundle is not installed or does not provide a patch entry, its switch is hidden and no missing-entry error is raised. Missing required entries still fail normally.
+
 ## Usage
 
 ### Model Sync
@@ -111,6 +123,26 @@ The DeepSeek metered baseline lives in `$DSH_HOME/profiles/<profile>/model-sync.
 | `usageEnabled` | `true` | Enable quota collection, the Usage page data, and composer rings |
 | `profile` | `web` | Which `$DSH_HOME/profiles/<name>` to read and write |
 | `pollMs` | `60000` | Poll interval parameter, minimum `5000`. Pages currently refresh quota every 60 seconds |
+
+### Recover from a legacy disabled override
+
+An older toggle implementation could write the following override, which unloads the host plugin and makes its settings pages and JSON API disappear:
+
+```yaml
+- id: model-sync
+  disabled: true
+```
+
+Replace it with feature-level configuration, then restart `dsh web`:
+
+```yaml
+- id: model-sync
+  config:
+    enabled: false
+    usageEnabled: true
+```
+
+After upgrading, the UI writes only `config.enabled` and `config.usageEnabled` for the built-in features. Loader-level `disabled` remains reserved for optional plugins.
 
 ## Notes
 

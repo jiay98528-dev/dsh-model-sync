@@ -53,6 +53,18 @@ dsh plugin --profile web add github:jiay98528-dev/dsh-model-sync
 
 包自带 cordis.patch.yml 补丁（`dsh.bundle`），客户端声明 `dsh.client.immediately: true`，装上即生效，不用手动改配置。
 
+## 功能开关
+
+关闭任一内置功能时，host 插件仍保持加载，因此 API 和两个独立设置页都会保留。这两个页面只注册在设置主侧栏，不会重复出现在 **设置 → 插件** 中。
+
+| 开关 | `cordis.patch.yml` 字段 | 关闭后的行为 |
+|---|---|---|
+| 模型同步 | `model-sync.config.enabled` | 停止在线发现和写入模型；用量功能继续工作 |
+| 模型用量查询 | `model-sync.config.usageEnabled` | 停止额度请求和基准重置，并隐藏输入框圆环；模型同步继续工作 |
+| 可选 `sub-model-access` | `sub-model-access.disabled` | 只卸载这个可选插件 |
+
+`sub-model-access` 是可选插件。未安装或 bundle 未提供对应 patch entry 时，界面会隐藏它的开关，也不会抛出 missing-entry 错误；必需 entry 缺失仍会正常报错。
+
 ## 使用
 
 ### 模型同步
@@ -111,6 +123,26 @@ DeepSeek 按量基准写在 `$DSH_HOME/profiles/<profile>/model-sync.baseline.js
 | `usageEnabled` | `true` | 启用额度采集、用量详情数据和输入框圆环 |
 | `profile` | `web` | 读写哪个 `$DSH_HOME/profiles/<name>` |
 | `pollMs` | `60000` | 轮询间隔参数，最小 `5000`。页面当前每 60 秒刷新额度 |
+
+### 从旧版 disabled 覆盖中恢复
+
+旧版开关可能写入下面的配置。它会卸载 host 插件，导致设置页和 JSON API 一起消失：
+
+```yaml
+- id: model-sync
+  disabled: true
+```
+
+请改成功能级配置，再重启 `dsh web`：
+
+```yaml
+- id: model-sync
+  config:
+    enabled: false
+    usageEnabled: true
+```
+
+升级后，两个内置功能只会写入 `config.enabled` 和 `config.usageEnabled`；loader 级 `disabled` 只用于可选插件。
 
 ## 说明
 

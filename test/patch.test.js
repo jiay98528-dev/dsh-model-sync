@@ -110,6 +110,10 @@ test('missing required bundle entry still throws', () => {
 		() => setEntryEnabled('web', 'model-sync', false),
 		/patch entry not found: model-sync/,
 	);
+	assert.throws(
+		() => setEntryEnabled('web', 'model-sync-usage', false),
+		/patch entry not found: model-sync-usage/,
+	);
 });
 
 test('client registers only the dedicated settings sidebar pages', () => {
