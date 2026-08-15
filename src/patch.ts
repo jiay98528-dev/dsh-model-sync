@@ -70,6 +70,35 @@ function entryEnabled(text: string, id: string, requiredIndent?: number): boolea
 	return disabledValue(lines, block) !== true;
 }
 
+function configEnabledValue(lines: string[], block: EntryBlock): boolean | undefined {
+	const configIndent = block.indent + 2;
+	let configAt = -1;
+	for (let index = block.start + 1; index < block.end; index++) {
+		const match = /^(\s*)config:\s*(?:#.*)?$/.exec(lines[index]);
+		if (match?.[1].length === configIndent) {
+			configAt = index;
+			break;
+		}
+	}
+	if (configAt < 0) return undefined;
+	const enabledIndent = configIndent + 2;
+	for (let index = configAt + 1; index < block.end; index++) {
+		const line = lines[index];
+		if (line.trim() === '') continue;
+		const indent = /^(\s*)/.exec(line)?.[1].length ?? 0;
+		if (indent <= configIndent) break;
+		const match = /^(\s*)enabled:\s*(true|false)\s*(?:#.*)?$/.exec(line);
+		if (match?.[1].length === enabledIndent) return match[2] === 'true';
+	}
+	return undefined;
+}
+
+function featureEnabled(text: string, id: string, requiredIndent?: number): boolean | undefined {
+	const lines = text.split(/\r?\n/);
+	const block = findEntryBlock(lines, id, requiredIndent);
+	return block ? configEnabledValue(lines, block) : undefined;
+}
+
 function readManifest(path: string): PackageManifest {
 	return JSON.parse(readFileSync(path, 'utf8')) as PackageManifest;
 }
@@ -101,13 +130,15 @@ export function readPluginEnabled(profile: string): Record<string, boolean | und
 			out[row.id] = undefined;
 			continue;
 		}
-		const overrideEnabled = entryEnabled(text, row.id, 0);
+		const overrideEnabled = row.toggle === 'feature'
+			? featureEnabled(text, row.id, 0)
+			: entryEnabled(text, row.id, 0);
 		out[row.id] = overrideEnabled ?? bundleEnabled;
 	}
 	return out;
 }
 
-function updateOverride(text: string, id: string, enabled: boolean): string {
+function updateLoaderOverride(text: string, id: string, enabled: boolean): string {
 	const lines = text.split(/\r?\n/);
 	const block = findEntryBlock(lines, id, 0);
 	const value = enabled ? 'false' : 'true';
@@ -135,12 +166,62 @@ function updateOverride(text: string, id: string, enabled: boolean): string {
 	return `${lines.join('\n').replace(/\n+$/, '')}\n`;
 }
 
+function updateFeatureOverride(text: string, id: string, enabled: boolean): string {
+	const lines = text.split(/\r?\n/);
+	const block = findEntryBlock(lines, id, 0);
+	if (block) {
+		const configIndent = block.indent + 2;
+		let configAt = -1;
+		for (let index = block.start + 1; index < block.end; index++) {
+			const match = /^(\s*)config:\s*(?:#.*)?$/.exec(lines[index]);
+			if (match?.[1].length === configIndent) {
+				configAt = index;
+				break;
+			}
+		}
+		if (configAt < 0) {
+			lines.splice(block.start + 1, 0,
+				`${' '.repeat(configIndent)}config:`,
+				`${' '.repeat(configIndent + 2)}enabled: ${enabled}`,
+			);
+		} else {
+			let enabledAt = -1;
+			for (let index = configAt + 1; index < block.end; index++) {
+				const line = lines[index];
+				if (line.trim() === '') continue;
+				const indent = /^(\s*)/.exec(line)?.[1].length ?? 0;
+				if (indent <= configIndent) break;
+				const match = /^(\s*)enabled:\s*/.exec(line);
+				if (match?.[1].length === configIndent + 2) {
+					enabledAt = index;
+					break;
+				}
+			}
+			const line = `${' '.repeat(configIndent + 2)}enabled: ${enabled}`;
+			if (enabledAt >= 0) lines[enabledAt] = line;
+			else lines.splice(configAt + 1, 0, line);
+		}
+	} else {
+		const override = [`- id: ${id}`, '  config:', `    enabled: ${enabled}`];
+		const emptyListAt = lines.findIndex((line) => line.trim() === '[]');
+		if (emptyListAt >= 0) lines.splice(emptyListAt, 1, ...override);
+		else {
+			while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+			lines.push(...override);
+		}
+	}
+	return `${lines.join('\n').replace(/\n+$/, '')}\n`;
+}
+
 function updateEntryEnabled(profile: string, id: string, enabled: boolean): boolean {
 	const plugin = MANAGED_PLUGIN_IDS.find((row) => row.id === id);
 	if (!plugin || bundleEntryEnabled(profile, plugin.id, plugin.packageName) === undefined) return false;
 	const path = profilePatchPath(profile);
 	const text = existsSync(path) ? readFileSync(path, 'utf8') : '[]\n';
-	writeFileSync(path, updateOverride(text, id, enabled), 'utf8');
+	const updated = plugin.toggle === 'feature'
+		? updateFeatureOverride(text, id, enabled)
+		: updateLoaderOverride(text, id, enabled);
+	writeFileSync(path, updated, 'utf8');
 	return true;
 }
 

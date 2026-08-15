@@ -60,14 +60,17 @@ export interface SyncState {
     providers: ProviderSnapshot[];
 }
 export interface ModelSyncConfig {
+    enabled: boolean;
     profile: string;
     pollMs: number;
 }
 export declare const DEFAULT_CONFIG: ModelSyncConfig;
 export declare const Config: z<Schemastery.ObjectS<{
+    enabled: z<boolean, boolean>;
     profile: z<string, string>;
     pollMs: z<number, number>;
 }>, Schemastery.ObjectT<{
+    enabled: z<boolean, boolean>;
     profile: z<string, string>;
     pollMs: z<number, number>;
 }>>;
@@ -77,11 +80,13 @@ export declare const MANAGED_PLUGIN_IDS: readonly [{
     readonly label: "订阅制模型接入";
     readonly packageName: "@agentteam/sub-model-access";
     readonly optional: true;
+    readonly toggle: "loader";
 }, {
     readonly id: "model-sync";
     readonly label: "模型同步";
     readonly packageName: "dsh-model-sync";
     readonly optional: false;
+    readonly toggle: "feature";
 }];
 /** Catalog defaults used when settings omit baseURL. */
 export declare const CATALOG_BASE: Record<string, {

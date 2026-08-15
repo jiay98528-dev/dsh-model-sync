@@ -80,7 +80,7 @@ window.__ModuleLoader__.load({
 				refresh: '刷新',
 				refreshing: '刷新中',
 				pluginsToggle: '插件启停',
-				pluginsHint: '写入 cordis.patch.yml 的 disabled 标志，热生效',
+				pluginsHint: '模型同步只关闭主要功能；可选插件写入 disabled 标志，均热生效',
 				noBaseURL: '无 baseURL',
 				applyN: '应用 {n} 个新模型',
 				noNew: '无新模型',
@@ -118,7 +118,7 @@ window.__ModuleLoader__.load({
 				refresh: 'Refresh',
 				refreshing: 'Refreshing',
 				pluginsToggle: 'Enable plugins',
-				pluginsHint: 'Writes the disabled flag in cordis.patch.yml; takes effect live.',
+				pluginsHint: 'Model Sync keeps settings mounted; optional plugins use the disabled flag.',
 				noBaseURL: 'no baseURL',
 				applyN: 'Apply {n} new models',
 				noNew: 'No new models',
@@ -766,6 +766,10 @@ window.__ModuleLoader__.load({
 				return dir.store.subscribe(pull);
 			}, [sessionId]);
 			var all = (state && state.providers) || [];
+			var active = state && state.plugins && state.plugins.some(function (plugin) {
+				return plugin.id === 'model-sync' && plugin.enabled;
+			});
+			if (!active) return null;
 			var filtered = [];
 			if (selection && selection.provider) {
 				for (var i = 0; i < all.length; i++) if (all[i].id === selection.provider) filtered.push(all[i]);

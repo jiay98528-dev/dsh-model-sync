@@ -60,7 +60,7 @@ The package ships a cordis.patch.yml bundle patch (`dsh.bundle`) and declares `d
 1. **Settings → Model Sync**.
 2. **Refresh** if the list is empty.
 3. Each card lists the provider id, `baseURL`, and model chips. A blue outline marks ids not in settings yet. **Apply N new models** writes them to `llm-pi-ai.providers.<id>.models`.
-4. The collapsed **Enable plugins** block toggles this plugin and the optional `sub-model-access`, writing the disabled flag in cordis.patch.yml. Takes effect live.
+4. The collapsed **Enable plugins** block keeps this settings UI mounted when Model Sync's main functionality is off. The optional `sub-model-access` toggle writes the loader disabled flag in cordis.patch.yml. Both take effect live.
 
 MiniMax, Kimi Coding, and OpenAI Codex have no OpenAI `/models` endpoint. The plugin uses the known catalog ids.
 

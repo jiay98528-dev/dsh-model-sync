@@ -65,16 +65,26 @@ test('bundle entry can be disabled and enabled through a user-layer override', (
 	assert.equal(readPluginEnabled('web')['sub-model-access'], true);
 });
 
-test('required bundle entry can be toggled when absent from the user layer', () => {
+test('model sync feature can be toggled without unloading its patch entry', () => {
 	assert.equal(readPluginEnabled('web')['model-sync'], true);
 
 	setEntryEnabled('web', 'model-sync', false);
-	assert.match(readFileSync(patchPath, 'utf8'), /- id: model-sync\n  disabled: true\n/);
+	assert.match(readFileSync(patchPath, 'utf8'), /- id: model-sync\n  config:\n    enabled: false\n/);
+	assert.doesNotMatch(readFileSync(patchPath, 'utf8'), /disabled:/);
 	assert.equal(readPluginEnabled('web')['model-sync'], false);
 
 	setEntryEnabled('web', 'model-sync', true);
-	assert.match(readFileSync(patchPath, 'utf8'), /- id: model-sync\n  disabled: false\n/);
+	assert.match(readFileSync(patchPath, 'utf8'), /- id: model-sync\n  config:\n    enabled: true\n/);
 	assert.equal(readPluginEnabled('web')['model-sync'], true);
+});
+
+test('model sync feature toggle preserves existing configuration', () => {
+	writeFileSync(patchPath, '- id: model-sync\n  config:\n    profile: custom\n    pollMs: 10000\n');
+
+	setEntryEnabled('web', 'model-sync', false);
+	const patch = readFileSync(patchPath, 'utf8');
+	assert.match(patch, /config:\n    enabled: false\n    profile: custom\n    pollMs: 10000\n/);
+	assert.equal(readPluginEnabled('web')['model-sync'], false);
 });
 
 test('missing required bundle entry still throws', () => {

@@ -43,6 +43,14 @@ function deepseekApiKeyEnv(ctx: Context): string {
 
 async function buildState(ctx: Context, config: ModelSyncConfig): Promise<SyncState> {
 	const enabled = readPluginEnabled(config.profile);
+	const plugins = MANAGED_PLUGIN_IDS
+		.filter((row) => !row.optional || enabled[row.id] !== undefined)
+		.map((row) => ({
+			id: row.id,
+			label: row.label,
+			enabled: enabled[row.id] === true,
+		}));
+	if (enabled['model-sync'] !== true) return { plugins, providers: [] };
 	const listings = await listAllProviders(ctx);
 	const settings = ctx.get('settings');
 	const section = settings?.get(settingsNamespace('llm-pi-ai')) as { providers?: Record<string, { apiKeyEnv?: string }> } | undefined;
@@ -70,15 +78,13 @@ async function buildState(ctx: Context, config: ModelSyncConfig): Promise<SyncSt
 		lastError: undefined,
 	});
 	return {
-		plugins: MANAGED_PLUGIN_IDS
-			.filter((row) => !row.optional || enabled[row.id] !== undefined)
-			.map((row) => ({
-				id: row.id,
-				label: row.label,
-				enabled: enabled[row.id] === true,
-			})),
+		plugins,
 		providers,
 	};
+}
+
+function modelSyncEnabled(config: ModelSyncConfig): boolean {
+	return readPluginEnabled(config.profile)['model-sync'] === true;
 }
 
 export function registerHttp(ctx: Context, config: ModelSyncConfig): () => void {
@@ -103,6 +109,10 @@ export function registerHttp(ctx: Context, config: ModelSyncConfig): () => void 
 					return;
 				}
 				if (req.method === 'POST' && path === `${HTTP_PREFIX}/apply`) {
+					if (!modelSyncEnabled(config)) {
+						send(res, 409, { error: 'model-sync feature disabled' });
+						return;
+					}
 					const body = (await readJson(req)) as { provider?: string; models?: Array<{ id: string; name: string }> };
 					if (!body.provider || !Array.isArray(body.models)) {
 						send(res, 400, { error: 'provider and models[] required' });
@@ -129,6 +139,10 @@ export function registerHttp(ctx: Context, config: ModelSyncConfig): () => void 
 					return;
 				}
 				if (req.method === 'POST' && path === `${HTTP_PREFIX}/baseline-reset`) {
+					if (!modelSyncEnabled(config)) {
+						send(res, 409, { error: 'model-sync feature disabled' });
+						return;
+					}
 					const body = (await readJson(req)) as { provider?: string };
 					if (!body.provider) {
 						send(res, 400, { error: 'provider required' });
