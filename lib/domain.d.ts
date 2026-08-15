@@ -76,10 +76,12 @@ export declare const MANAGED_PLUGIN_IDS: readonly [{
     readonly id: "sub-model-access";
     readonly label: "订阅制模型接入";
     readonly packageName: "@agentteam/sub-model-access";
+    readonly optional: true;
 }, {
     readonly id: "model-sync";
     readonly label: "模型同步";
     readonly packageName: "dsh-model-sync";
+    readonly optional: false;
 }];
 /** Catalog defaults used when settings omit baseURL. */
 export declare const CATALOG_BASE: Record<string, {

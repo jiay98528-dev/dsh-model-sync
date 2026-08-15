@@ -43,6 +43,7 @@
 	},
 	"scripts": {
 		"build": "tsc -p tsconfig.json && node ./scripts/copy-client.mjs",
+		"test": "pnpm build && node --test test/patch.test.js",
 		"prepack": "npm run build"
 	},
 	"dsh": {

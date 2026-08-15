@@ -10,18 +10,18 @@ export function profilePatchPath(profile: string): string {
 	return join(home, 'profiles', profile, 'cordis.patch.yml');
 }
 
-export function readPluginEnabled(profile: string): Record<string, boolean> {
+export function readPluginEnabled(profile: string): Record<string, boolean | undefined> {
 	const text = readFileSync(profilePatchPath(profile), 'utf8');
-	const out: Record<string, boolean> = {};
+	const out: Record<string, boolean | undefined> = {};
 	for (const row of MANAGED_PLUGIN_IDS) {
 		out[row.id] = isEntryEnabled(text, row.id);
 	}
 	return out;
 }
 
-function isEntryEnabled(text: string, id: string): boolean {
+function isEntryEnabled(text: string, id: string): boolean | undefined {
 	const block = extractEntryBlock(text, id);
-	if (!block) return false;
+	if (!block) return undefined;
 	return !/^\s+disabled:\s*true\s*$/m.test(block);
 }
 
@@ -44,12 +44,12 @@ function extractEntryBlock(text: string, id: string): string | undefined {
 	return lines.slice(start, end).join('\n');
 }
 
-export function setEntryEnabled(profile: string, id: string, enabled: boolean): void {
+function updateEntryEnabled(profile: string, id: string, enabled: boolean): boolean {
 	const path = profilePatchPath(profile);
 	const text = readFileSync(path, 'utf8');
 	const lines = text.split(/\r?\n/);
 	const start = lines.findIndex((line) => /^\s+-\s+id:\s+/.test(line) && line.includes(id));
-	if (start < 0) throw new Error(`patch entry not found: ${id}`);
+	if (start < 0) return false;
 	const indentMatch = /^(\s*)-\s+id:/.exec(lines[start]);
 	const childIndent = `${indentMatch?.[1] ?? '    '}  `;
 	const indent = indentMatch?.[1].length ?? 0;
@@ -72,4 +72,14 @@ export function setEntryEnabled(profile: string, id: string, enabled: boolean): 
 		lines.splice(start + 1, 0, `${childIndent}disabled: true`);
 	}
 	writeFileSync(path, `${lines.join('\n').replace(/\n+$/, '')}\n`, 'utf8');
+	return true;
+}
+
+export function setEntryEnabled(profile: string, id: string, enabled: boolean): void {
+	if (!updateEntryEnabled(profile, id, enabled)) throw new Error(`patch entry not found: ${id}`);
+}
+
+/** Update an optional entry, returning false when it is not configured. */
+export function setEntryEnabledIfPresent(profile: string, id: string, enabled: boolean): boolean {
+	return updateEntryEnabled(profile, id, enabled);
 }

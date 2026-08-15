@@ -88,8 +88,8 @@ export const Config = z.object({
 export const HTTP_PREFIX = '/agentteam/model-sync';
 
 export const MANAGED_PLUGIN_IDS = [
-	{ id: 'sub-model-access', label: '订阅制模型接入', packageName: '@agentteam/sub-model-access' },
-	{ id: 'model-sync', label: '模型同步', packageName: 'dsh-model-sync' },
+	{ id: 'sub-model-access', label: '订阅制模型接入', packageName: '@agentteam/sub-model-access', optional: true },
+	{ id: 'model-sync', label: '模型同步', packageName: 'dsh-model-sync', optional: false },
 ] as const;
 
 /** Catalog defaults used when settings omit baseURL. */

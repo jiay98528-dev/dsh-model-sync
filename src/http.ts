@@ -11,7 +11,7 @@ import {
 	type ProviderSnapshot,
 	type SyncState,
 } from './domain.js';
-import { readPluginEnabled, setEntryEnabled } from './patch.js';
+import { readPluginEnabled, setEntryEnabled, setEntryEnabledIfPresent } from './patch.js';
 import { collectQuota, resetBaseline } from './quota.js';
 
 interface WebServer {
@@ -70,11 +70,13 @@ async function buildState(ctx: Context, config: ModelSyncConfig): Promise<SyncSt
 		lastError: undefined,
 	});
 	return {
-		plugins: MANAGED_PLUGIN_IDS.map((row) => ({
-			id: row.id,
-			label: row.label,
-			enabled: enabled[row.id] !== false,
-		})),
+		plugins: MANAGED_PLUGIN_IDS
+			.filter((row) => !row.optional || enabled[row.id] !== undefined)
+			.map((row) => ({
+				id: row.id,
+				label: row.label,
+				enabled: enabled[row.id] === true,
+			})),
 		providers,
 	};
 }
@@ -116,11 +118,13 @@ export function registerHttp(ctx: Context, config: ModelSyncConfig): () => void 
 						send(res, 400, { error: 'id and enabled required' });
 						return;
 					}
-					if (!MANAGED_PLUGIN_IDS.some((row) => row.id === body.id)) {
+					const plugin = MANAGED_PLUGIN_IDS.find((row) => row.id === body.id);
+					if (!plugin) {
 						send(res, 400, { error: `unknown plugin ${body.id}` });
 						return;
 					}
-					setEntryEnabled(config.profile, body.id, body.enabled);
+					if (plugin.optional) setEntryEnabledIfPresent(config.profile, body.id, body.enabled);
+					else setEntryEnabled(config.profile, body.id, body.enabled);
 					send(res, 200, { ok: true, state: await buildState(ctx, config) });
 					return;
 				}
