@@ -6,12 +6,34 @@ import { afterEach, beforeEach, test } from 'node:test';
 import { readPluginEnabled, setEntryEnabled, setEntryEnabledIfPresent } from '../lib/patch.js';
 
 let root;
+let profileDir;
 let patchPath;
+
+function installBundle(packageName, id) {
+	const packageDir = join(profileDir, 'node_modules', ...packageName.split('/'));
+	mkdirSync(packageDir, { recursive: true });
+	writeFileSync(join(packageDir, 'package.json'), JSON.stringify({
+		name: packageName,
+		dsh: { bundle: { patch: './cordis.patch.yml' } },
+	}));
+	writeFileSync(join(packageDir, 'cordis.patch.yml'), `- insert:\n    - id: ${id}\n      name: ${packageName}\n`);
+}
+
+function writeProfile(bundles) {
+	writeFileSync(join(profileDir, 'package.json'), JSON.stringify({
+		name: 'test-profile',
+		dsh: { profile: { bundles } },
+	}));
+}
 
 beforeEach(() => {
 	root = mkdtempSync(join(tmpdir(), 'dsh-model-sync-'));
-	patchPath = join(root, 'profiles', 'web', 'cordis.patch.yml');
-	mkdirSync(join(root, 'profiles', 'web'), { recursive: true });
+	profileDir = join(root, 'profiles', 'web');
+	patchPath = join(profileDir, 'cordis.patch.yml');
+	mkdirSync(profileDir, { recursive: true });
+	writeFileSync(patchPath, '# user overrides\n[]\n');
+	installBundle('dsh-model-sync', 'model-sync');
+	writeProfile(['dsh-model-sync']);
 	process.env.DSH_HOME = root;
 });
 
@@ -20,9 +42,8 @@ afterEach(() => {
 	rmSync(root, { recursive: true, force: true });
 });
 
-test('missing optional entry is reported as absent and ignored when toggled', () => {
-	const source = '  - id: model-sync\n    name: dsh-model-sync\n';
-	writeFileSync(patchPath, source);
+test('missing optional bundle is absent and ignored when toggled', () => {
+	const source = readFileSync(patchPath, 'utf8');
 
 	const enabled = readPluginEnabled('web');
 	assert.equal(enabled['model-sync'], true);
@@ -31,20 +52,33 @@ test('missing optional entry is reported as absent and ignored when toggled', ()
 	assert.equal(readFileSync(patchPath, 'utf8'), source);
 });
 
-test('present optional entry can still be disabled and enabled', () => {
-	writeFileSync(patchPath, '  - id: sub-model-access\n    name: "@agentteam/sub-model-access"\n  - id: model-sync\n    name: dsh-model-sync\n');
+test('bundle entry can be disabled and enabled through a user-layer override', () => {
+	installBundle('@agentteam/sub-model-access', 'sub-model-access');
+	writeProfile(['dsh-model-sync', '@agentteam/sub-model-access']);
 
 	assert.equal(setEntryEnabledIfPresent('web', 'sub-model-access', false), true);
-	assert.match(readFileSync(patchPath, 'utf8'), /id: sub-model-access\n    disabled: true\n/);
+	assert.match(readFileSync(patchPath, 'utf8'), /- id: sub-model-access\n  disabled: true\n/);
 	assert.equal(readPluginEnabled('web')['sub-model-access'], false);
 
 	assert.equal(setEntryEnabledIfPresent('web', 'sub-model-access', true), true);
-	assert.doesNotMatch(readFileSync(patchPath, 'utf8'), /disabled: true/);
+	assert.match(readFileSync(patchPath, 'utf8'), /- id: sub-model-access\n  disabled: false\n/);
 	assert.equal(readPluginEnabled('web')['sub-model-access'], true);
 });
 
-test('missing required entry still throws', () => {
-	writeFileSync(patchPath, '  - id: sub-model-access\n    name: "@agentteam/sub-model-access"\n');
+test('required bundle entry can be toggled when absent from the user layer', () => {
+	assert.equal(readPluginEnabled('web')['model-sync'], true);
+
+	setEntryEnabled('web', 'model-sync', false);
+	assert.match(readFileSync(patchPath, 'utf8'), /- id: model-sync\n  disabled: true\n/);
+	assert.equal(readPluginEnabled('web')['model-sync'], false);
+
+	setEntryEnabled('web', 'model-sync', true);
+	assert.match(readFileSync(patchPath, 'utf8'), /- id: model-sync\n  disabled: false\n/);
+	assert.equal(readPluginEnabled('web')['model-sync'], true);
+});
+
+test('missing required bundle entry still throws', () => {
+	writeProfile([]);
 
 	assert.throws(
 		() => setEntryEnabled('web', 'model-sync', false),
