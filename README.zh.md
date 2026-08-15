@@ -60,7 +60,7 @@ dsh plugin --profile web add github:jiay98528-dev/dsh-model-sync
 1. 打开 **设置 → 模型同步**。
 2. 列表空就点 **刷新**。
 3. 每张卡片列出提供方 id、`baseURL` 和模型芯片。蓝框是 settings 里还没有的 id，点 **应用 N 个新模型** 写进 `llm-pi-ai.providers.<id>.models`。
-4. 折叠的 **插件启停** 中，“模型同步”和“模型用量”可以分别关闭，两个设置页都会保留；可选的 `sub-model-access` 才写 cordis.patch.yml 的 loader disabled 标志。
+4. 折叠的 **功能与插件** 中只控制“模型同步”；可选的 `sub-model-access` 才写 cordis.patch.yml 的 loader disabled 标志。
 
 MiniMax、Kimi Coding、OpenAI Codex 没有 OpenAI `/models` 端点，插件用 catalog 里的已知 id。
 
@@ -70,6 +70,7 @@ MiniMax、Kimi Coding、OpenAI Codex 没有 OpenAI `/models` 端点，插件用 
 2. 每家列出 5 小时和 7 天窗口，各占一行，带剩余百分比、厂商累计次数、重置倒计时和彩色进度条。
 3. 按量行显示 `当前 / 基准`，首采把当时余额当基准。要把插件启用前已经花掉的部分算进百分比，点 **以当前余额为基准**，余额行还会记录基准时间。
 4. 页面每 60 秒自动刷新，也可以点 **刷新** 立即拉一次。
+5. 本页的“模型用量查询”开关可以独立关闭额度请求和输入框圆环，不影响模型同步功能。
 
 ### 对话圆环
 

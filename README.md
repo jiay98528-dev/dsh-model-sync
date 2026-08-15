@@ -60,7 +60,7 @@ The package ships a cordis.patch.yml bundle patch (`dsh.bundle`) and declares `d
 1. **Settings → Model Sync**.
 2. **Refresh** if the list is empty.
 3. Each card lists the provider id, `baseURL`, and model chips. A blue outline marks ids not in settings yet. **Apply N new models** writes them to `llm-pi-ai.providers.<id>.models`.
-4. The collapsed **Enable plugins** block controls Model Sync and Model Usage independently while keeping both settings pages mounted. The optional `sub-model-access` toggle writes the loader disabled flag in cordis.patch.yml.
+4. The collapsed **Features and plugins** block controls Model Sync. The optional `sub-model-access` toggle writes the loader disabled flag in cordis.patch.yml.
 
 MiniMax, Kimi Coding, and OpenAI Codex have no OpenAI `/models` endpoint. The plugin uses the known catalog ids.
 
@@ -70,6 +70,7 @@ MiniMax, Kimi Coding, and OpenAI Codex have no OpenAI `/models` endpoint. The pl
 2. Each provider lists its 5-hour and 7-day windows, one row each, with remaining percent, vendor cumulative counts, a reset countdown, and a colored bar.
 3. Metered rows show `current / baseline`. The first sample becomes the baseline. To count spend from before the plugin was enabled, click **Use current balance as baseline**. The balance row also records when the baseline was set.
 4. The page auto-refreshes every 60 seconds. **Refresh** pulls immediately.
+5. **Model usage queries** can be disabled independently from the switch on this page; quota calls and composer rings stop while Model Sync keeps working.
 
 ### Composer rings
 
