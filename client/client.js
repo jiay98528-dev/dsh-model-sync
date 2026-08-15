@@ -79,8 +79,10 @@ window.__ModuleLoader__.load({
 				syncLead: '从各提供方 /models 抓取新模型并写入 settings；额度与累计用量见「用量详情」。',
 				refresh: '刷新',
 				refreshing: '刷新中',
-				pluginsToggle: '插件启停',
-				pluginsHint: '模型同步只关闭主要功能；可选插件写入 disabled 标志，均热生效',
+				pluginsToggle: '功能与插件',
+				pluginsHint: '模型同步与模型用量可独立关闭；可选插件使用 disabled 标志',
+				syncDisabled: '模型同步功能已关闭。',
+				usageDisabled: '模型用量功能已关闭。',
 				noBaseURL: '无 baseURL',
 				applyN: '应用 {n} 个新模型',
 				noNew: '无新模型',
@@ -117,8 +119,10 @@ window.__ModuleLoader__.load({
 				syncLead: 'Pull live /models into settings. Quotas and cumulative usage live on the Usage page.',
 				refresh: 'Refresh',
 				refreshing: 'Refreshing',
-				pluginsToggle: 'Enable plugins',
-				pluginsHint: 'Model Sync keeps settings mounted; optional plugins use the disabled flag.',
+				pluginsToggle: 'Features and plugins',
+				pluginsHint: 'Model Sync and Usage can be disabled independently; optional plugins use the disabled flag.',
+				syncDisabled: 'Model Sync is disabled.',
+				usageDisabled: 'Model Usage is disabled.',
 				noBaseURL: 'no baseURL',
 				applyN: 'Apply {n} new models',
 				noNew: 'No new models',
@@ -204,6 +208,12 @@ window.__ModuleLoader__.load({
 					return body;
 				});
 			});
+		}
+
+		function pluginEnabled(state, id) {
+			return !!(state && state.plugins && state.plugins.some(function (plugin) {
+				return plugin.id === id && plugin.enabled;
+			}));
 		}
 
 		function pct(window) {
@@ -473,6 +483,7 @@ window.__ModuleLoader__.load({
 				});
 			}
 
+			var syncActive = pluginEnabled(state, 'model-sync');
 			return h('div', { className: 'msync-page' },
 				h('div', { className: 'msync-row' },
 					h('div', null,
@@ -500,7 +511,8 @@ window.__ModuleLoader__.load({
 						}),
 					),
 				),
-				(state && state.providers ? state.providers : []).map(function (provider) {
+				state && !syncActive ? h('p', { className: 'hint' }, t('syncDisabled')) : null,
+				(syncActive && state && state.providers ? state.providers : []).map(function (provider) {
 					var news = (provider.discovered || []).filter(function (m) { return m.isNew; });
 					var q = provider.quota || {};
 					var hasQuota = (q.windows && q.windows.length) || q.balance;
@@ -628,6 +640,7 @@ window.__ModuleLoader__.load({
 					if (u > updated) updated = u;
 				}
 			}
+			var usageActive = pluginEnabled(state, 'model-sync-usage');
 			return h('div', { className: 'msync-page' },
 				h('div', { className: 'msync-row' },
 					h('div', null,
@@ -640,7 +653,8 @@ window.__ModuleLoader__.load({
 					),
 				),
 				err ? h('p', { className: 'msync-err' }, err) : null,
-				(state && state.providers ? state.providers : []).map(function (provider) {
+				state && !usageActive ? h('p', { className: 'hint' }, t('usageDisabled')) : null,
+				(usageActive && state && state.providers ? state.providers : []).map(function (provider) {
 					var q = provider.quota || {};
 					var rows = [];
 					(q.windows || []).forEach(function (w) {
@@ -766,9 +780,7 @@ window.__ModuleLoader__.load({
 				return dir.store.subscribe(pull);
 			}, [sessionId]);
 			var all = (state && state.providers) || [];
-			var active = state && state.plugins && state.plugins.some(function (plugin) {
-				return plugin.id === 'model-sync' && plugin.enabled;
-			});
+			var active = pluginEnabled(state, 'model-sync-usage');
 			if (!active) return null;
 			var filtered = [];
 			if (selection && selection.provider) {
@@ -804,22 +816,6 @@ window.__ModuleLoader__.load({
 					order: 17,
 					label: function () { return t('navUsage'); },
 				}, UsagePage);
-			});
-			slots.inject('settings.plugins.tab', function () {
-				return slots.register({
-					name: 'settings.plugins.tab',
-					id: 'model-sync',
-					order: 20,
-					label: function () { return t('navSync'); },
-				}, SettingsPage);
-			});
-			slots.inject('settings.plugin.item', function () {
-				return slots.register({
-					name: 'settings.plugin.item',
-					id: 'model-sync-card',
-					order: 40,
-					label: function () { return t('navSync'); },
-				}, SettingsPage);
 			});
 			slots.inject('conversation.input.right', function () {
 				return slots.register({

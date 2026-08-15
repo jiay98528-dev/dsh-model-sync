@@ -103,13 +103,24 @@ export async function listProvider(ctx: Context, id: string, section: ProviderSe
 	return { id, baseURL, configuredIds, discovered, error: undefined };
 }
 
-export async function listAllProviders(ctx: Context): Promise<LiveListing[]> {
+export async function listAllProviders(ctx: Context, discover = true): Promise<LiveListing[]> {
 	const settings = ctx.get('settings');
 	if (!settings) return [];
 	const section = settings.get(settingsNamespace('llm-pi-ai')) as { providers?: Record<string, ProviderSection> } | undefined;
 	const providers = section?.providers ?? {};
 	const ids = Object.keys(providers);
-	return Promise.all(ids.map((id) => listProvider(ctx, id, providers[id] ?? {})));
+	if (discover) return Promise.all(ids.map((id) => listProvider(ctx, id, providers[id] ?? {})));
+	return ids.map((id) => {
+		const provider = providers[id] ?? {};
+		const catalog = CATALOG_BASE[id];
+		return {
+			id,
+			baseURL: provider.baseURL || catalog?.baseURL || '',
+			configuredIds: (provider.models ?? []).map((model) => model.id).filter((value): value is string => typeof value === 'string' && value.length > 0),
+			discovered: [],
+			error: undefined,
+		};
+	});
 }
 
 export async function applyModels(ctx: Context, provider: string, models: Array<{ id: string; name: string }>): Promise<{ added: string[] }> {

@@ -60,7 +60,7 @@ The package ships a cordis.patch.yml bundle patch (`dsh.bundle`) and declares `d
 1. **Settings → Model Sync**.
 2. **Refresh** if the list is empty.
 3. Each card lists the provider id, `baseURL`, and model chips. A blue outline marks ids not in settings yet. **Apply N new models** writes them to `llm-pi-ai.providers.<id>.models`.
-4. The collapsed **Enable plugins** block keeps this settings UI mounted when Model Sync's main functionality is off. The optional `sub-model-access` toggle writes the loader disabled flag in cordis.patch.yml. Both take effect live.
+4. The collapsed **Enable plugins** block controls Model Sync and Model Usage independently while keeping both settings pages mounted. The optional `sub-model-access` toggle writes the loader disabled flag in cordis.patch.yml.
 
 MiniMax, Kimi Coding, and OpenAI Codex have no OpenAI `/models` endpoint. The plugin uses the known catalog ids.
 
@@ -98,12 +98,16 @@ The DeepSeek metered baseline lives in `$DSH_HOME/profiles/<profile>/model-sync.
 - id: model-sync
   name: dsh-model-sync
   config:
+    enabled: true
+    usageEnabled: true
     profile: web
     pollMs: 60000
 ```
 
 | Field | Default | Meaning |
 |---|---|---|
+| `enabled` | `true` | Enable live model discovery and applying new model ids |
+| `usageEnabled` | `true` | Enable quota collection, the Usage page data, and composer rings |
 | `profile` | `web` | Which `$DSH_HOME/profiles/<name>` to read and write |
 | `pollMs` | `60000` | Poll interval parameter, minimum `5000`. Pages currently refresh quota every 60 seconds |
 

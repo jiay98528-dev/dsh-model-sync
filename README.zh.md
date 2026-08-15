@@ -60,7 +60,7 @@ dsh plugin --profile web add github:jiay98528-dev/dsh-model-sync
 1. 打开 **设置 → 模型同步**。
 2. 列表空就点 **刷新**。
 3. 每张卡片列出提供方 id、`baseURL` 和模型芯片。蓝框是 settings 里还没有的 id，点 **应用 N 个新模型** 写进 `llm-pi-ai.providers.<id>.models`。
-4. 折叠的 **插件启停** 中，“模型同步”只关闭主要功能并保留本设置页；可选的 `sub-model-access` 才写 cordis.patch.yml 的 loader disabled 标志，均热生效。
+4. 折叠的 **插件启停** 中，“模型同步”和“模型用量”可以分别关闭，两个设置页都会保留；可选的 `sub-model-access` 才写 cordis.patch.yml 的 loader disabled 标志。
 
 MiniMax、Kimi Coding、OpenAI Codex 没有 OpenAI `/models` 端点，插件用 catalog 里的已知 id。
 
@@ -98,12 +98,16 @@ DeepSeek 按量基准写在 `$DSH_HOME/profiles/<profile>/model-sync.baseline.js
 - id: model-sync
   name: dsh-model-sync
   config:
+    enabled: true
+    usageEnabled: true
     profile: web
     pollMs: 60000
 ```
 
 | 字段 | 默认 | 含义 |
 |---|---|---|
+| `enabled` | `true` | 启用模型发现和写入新模型 id |
+| `usageEnabled` | `true` | 启用额度采集、用量详情数据和输入框圆环 |
 | `profile` | `web` | 读写哪个 `$DSH_HOME/profiles/<name>` |
 | `pollMs` | `60000` | 轮询间隔参数，最小 `5000`。页面当前每 60 秒刷新额度 |
 

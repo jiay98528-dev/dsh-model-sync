@@ -47,6 +47,7 @@ test('missing optional bundle is absent and ignored when toggled', () => {
 
 	const enabled = readPluginEnabled('web');
 	assert.equal(enabled['model-sync'], true);
+	assert.equal(enabled['model-sync-usage'], true);
 	assert.equal(enabled['sub-model-access'], undefined);
 	assert.equal(setEntryEnabledIfPresent('web', 'sub-model-access', true), false);
 	assert.equal(readFileSync(patchPath, 'utf8'), source);
@@ -87,6 +88,21 @@ test('model sync feature toggle preserves existing configuration', () => {
 	assert.equal(readPluginEnabled('web')['model-sync'], false);
 });
 
+test('model sync and usage features can be toggled independently', () => {
+	setEntryEnabled('web', 'model-sync', false);
+	assert.equal(readPluginEnabled('web')['model-sync'], false);
+	assert.equal(readPluginEnabled('web')['model-sync-usage'], true);
+
+	setEntryEnabled('web', 'model-sync-usage', false);
+	assert.equal(readPluginEnabled('web')['model-sync'], false);
+	assert.equal(readPluginEnabled('web')['model-sync-usage'], false);
+	assert.match(readFileSync(patchPath, 'utf8'), /config:\n    usageEnabled: false\n    enabled: false\n/);
+
+	setEntryEnabled('web', 'model-sync', true);
+	assert.equal(readPluginEnabled('web')['model-sync'], true);
+	assert.equal(readPluginEnabled('web')['model-sync-usage'], false);
+});
+
 test('missing required bundle entry still throws', () => {
 	writeProfile([]);
 
@@ -94,4 +110,12 @@ test('missing required bundle entry still throws', () => {
 		() => setEntryEnabled('web', 'model-sync', false),
 		/patch entry not found: model-sync/,
 	);
+});
+
+test('client registers only the dedicated settings sidebar pages', () => {
+	const client = readFileSync(join(process.cwd(), 'lib', 'client.js'), 'utf8');
+	assert.doesNotMatch(client, /settings\.plugins\.tab/);
+	assert.doesNotMatch(client, /settings\.plugin\.item/);
+	assert.match(client, /id: 'model-sync'/);
+	assert.match(client, /id: 'model-sync-usage'/);
 });

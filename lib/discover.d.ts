@@ -16,7 +16,7 @@ export interface LiveListing {
     error: string | undefined;
 }
 export declare function listProvider(ctx: Context, id: string, section: ProviderSection): Promise<LiveListing>;
-export declare function listAllProviders(ctx: Context): Promise<LiveListing[]>;
+export declare function listAllProviders(ctx: Context, discover?: boolean): Promise<LiveListing[]>;
 export declare function applyModels(ctx: Context, provider: string, models: Array<{
     id: string;
     name: string;

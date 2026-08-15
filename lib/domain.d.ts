@@ -61,32 +61,47 @@ export interface SyncState {
 }
 export interface ModelSyncConfig {
     enabled: boolean;
+    usageEnabled: boolean;
     profile: string;
     pollMs: number;
 }
 export declare const DEFAULT_CONFIG: ModelSyncConfig;
 export declare const Config: z<Schemastery.ObjectS<{
     enabled: z<boolean, boolean>;
+    usageEnabled: z<boolean, boolean>;
     profile: z<string, string>;
     pollMs: z<number, number>;
 }>, Schemastery.ObjectT<{
     enabled: z<boolean, boolean>;
+    usageEnabled: z<boolean, boolean>;
     profile: z<string, string>;
     pollMs: z<number, number>;
 }>>;
 export declare const HTTP_PREFIX = "/agentteam/model-sync";
 export declare const MANAGED_PLUGIN_IDS: readonly [{
     readonly id: "sub-model-access";
+    readonly entryId: "sub-model-access";
     readonly label: "订阅制模型接入";
     readonly packageName: "@agentteam/sub-model-access";
     readonly optional: true;
     readonly toggle: "loader";
+    readonly configKey: undefined;
 }, {
     readonly id: "model-sync";
+    readonly entryId: "model-sync";
     readonly label: "模型同步";
     readonly packageName: "dsh-model-sync";
     readonly optional: false;
     readonly toggle: "feature";
+    readonly configKey: "enabled";
+}, {
+    readonly id: "model-sync-usage";
+    readonly entryId: "model-sync";
+    readonly label: "模型用量";
+    readonly packageName: "dsh-model-sync";
+    readonly optional: false;
+    readonly toggle: "feature";
+    readonly configKey: "usageEnabled";
 }];
 /** Catalog defaults used when settings omit baseURL. */
 export declare const CATALOG_BASE: Record<string, {
