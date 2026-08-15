@@ -1,5 +1,5 @@
 {
-	"name": "@agentteam/model-sync",
+	"name": "dsh-model-sync",
 	"version": "0.1.0",
 	"description": "Sync live provider model lists into DSH settings and show 5h/7d quota rings for the current session model.",
 	"type": "module",
@@ -33,8 +33,13 @@
 		"lib",
 		"cordis.patch.yml",
 		"README.md",
+		"README.zh.md",
 		"LICENSE"
 	],
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
 	"scripts": {
 		"build": "tsc -p tsconfig.json && node ./scripts/copy-client.mjs",
 		"prepack": "npm run build"

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-label="dsh-model-sync">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F5F7FF"/>
+      <stop offset="1" stop-color="#E8EDFF"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4D6BFE"/>
+      <stop offset="1" stop-color="#2B3FD4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="420" fill="url(#sky)"/>
+  <circle cx="1080" cy="70" r="180" fill="#4D6BFE" opacity=".06"/>
+  <circle cx="180" cy="380" r="160" fill="#2B3FD4" opacity=".05"/>
+  <g transform="translate(96 126)">
+    <rect width="168" height="168" rx="38" fill="url(#mark)"/>
+    <circle cx="84" cy="84" r="52" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="10"/>
+    <circle cx="84" cy="84" r="52" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-dasharray="220 327" transform="rotate(-90 84 84)"/>
+    <circle cx="84" cy="84" r="30" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="8"/>
+    <circle cx="84" cy="84" r="30" fill="none" stroke="#E8ECFF" stroke-width="8" stroke-linecap="round" stroke-dasharray="113 188" transform="rotate(-90 84 84)"/>
+    <circle cx="84" cy="84" r="9" fill="#fff"/>
+  </g>
+  <text x="308" y="188" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="56" font-weight="700" fill="#111827">dsh-model-sync</text>
+  <text x="308" y="236" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="26" fill="#4D6BFE">模型同步</text>
+  <text x="308" y="286" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="22" fill="#5B6475">Live model lists into DSH settings. 5h / 7d rings for the current session model.</text>
+</svg>

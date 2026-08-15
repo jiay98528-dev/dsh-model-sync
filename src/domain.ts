@@ -13,9 +13,13 @@ export interface QuotaWindow {
 	resetAt: number | undefined;
 }
 
+/** Pay-as-you-go API credit. Remaining percent = current / lastRecharge. */
 export interface QuotaBalance {
+	/** Current balance. */
 	current: number;
+	/** Balance right after the last top-up (baseline B0); reset whenever a reading exceeds it. */
 	lastRecharge: number;
+	/** Currency code, e.g. CNY / USD. */
 	unit: string;
 }
 
@@ -72,7 +76,7 @@ export const HTTP_PREFIX = '/agentteam/model-sync';
 
 export const MANAGED_PLUGIN_IDS = [
 	{ id: 'sub-model-access', label: '订阅制模型接入', packageName: '@agentteam/sub-model-access' },
-	{ id: 'model-sync', label: '模型同步', packageName: '@agentteam/model-sync' },
+	{ id: 'model-sync', label: '模型同步', packageName: 'dsh-model-sync' },
 ] as const;
 
 /** Catalog defaults used when settings omit baseURL. */

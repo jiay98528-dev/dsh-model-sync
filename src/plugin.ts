@@ -7,7 +7,7 @@ import type { Context } from './dsh-adapter.js';
 import { Config, type ModelSyncConfig } from './domain.js';
 import { registerHttp } from './http.js';
 
-const CLIENT_ID = '@agentteam/model-sync';
+const CLIENT_ID = 'dsh-model-sync';
 
 function shortRev(buf: Buffer): string {
 	let hash = 0;

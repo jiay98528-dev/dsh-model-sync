@@ -8,9 +8,13 @@ export interface QuotaWindow {
     remaining: number;
     resetAt: number | undefined;
 }
+/** Pay-as-you-go API credit. Remaining percent = current / lastRecharge. */
 export interface QuotaBalance {
+    /** Current balance. */
     current: number;
+    /** Balance right after the last top-up (baseline B0); reset whenever a reading exceeds it. */
     lastRecharge: number;
+    /** Currency code, e.g. CNY / USD. */
     unit: string;
 }
 export interface QuotaSnapshot {
@@ -62,7 +66,7 @@ export declare const MANAGED_PLUGIN_IDS: readonly [{
 }, {
     readonly id: "model-sync";
     readonly label: "模型同步";
-    readonly packageName: "@agentteam/model-sync";
+    readonly packageName: "dsh-model-sync";
 }];
 /** Catalog defaults used when settings omit baseURL. */
 export declare const CATALOG_BASE: Record<string, {

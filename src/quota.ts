@@ -1,7 +1,10 @@
 // Quota collectors ported from CC Switch (farion1231/cc-switch)
 // coding_plan.rs + subscription.rs — not /models response headers.
+// Pay-as-you-go API credits (balance) are collected separately and keep a
+// local "last recharge" baseline so the remaining percent can be shown as
+// current / last-recharge.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { credentialRef, type Context } from './dsh-adapter.js';
@@ -196,12 +199,118 @@ async function fetchMinimax(ctx: Context, apiKeyEnv: string): Promise<QuotaSnaps
 	}
 }
 
-export async function collectQuota(ctx: Context, provider: string, apiKeyEnv: string | undefined): Promise<QuotaSnapshot> {
+// === pay-as-you-go balance collectors ===
+
+const DEEPSEEK_BALANCE_URL = 'https://api.deepseek.com/user/balance';
+
+export interface BalanceRecord {
+	/** Balance right after the last top-up (baseline B0); percent = current / lastRecharge. */
+	lastRecharge: number;
+	unit: string;
+	/** Unix ms when the baseline was set. */
+	at: number;
+}
+
+interface BalanceReading {
+	current: number;
+	unit: string;
+}
+
+function balanceFilePath(profile: string): string {
+	const home = process.env.DSH_HOME ?? join(process.env.USERPROFILE ?? process.env.HOME ?? '', '.dsh');
+	return join(home, 'profiles', profile, 'model-sync.baseline.json');
+}
+
+function readBaseline(profile: string): Record<string, BalanceRecord> {
+	try {
+		const parsed = JSON.parse(readFileSync(balanceFilePath(profile), 'utf8')) as Record<string, unknown>;
+		const out: Record<string, BalanceRecord> = {};
+		for (const [key, value] of Object.entries(parsed)) {
+			if (typeof value !== 'object' || value === null) continue;
+			const rec = value as Record<string, unknown>;
+			const lastRecharge = asNumber(rec.lastRecharge);
+			const unit = typeof rec.unit === 'string' ? rec.unit : '';
+			if (lastRecharge === undefined || !unit) continue;
+			out[key] = { lastRecharge, unit, at: asNumber(rec.at) ?? Date.now() };
+		}
+		return out;
+	} catch {
+		return {};
+	}
+}
+
+// Serialize baseline writes so concurrent /state polls never race read-modify-write.
+let baselineChain: Promise<void> = Promise.resolve();
+
+function persistBaseline(profile: string, rows: Record<string, BalanceRecord>): Promise<void> {
+	const path = balanceFilePath(profile);
+	baselineChain = baselineChain
+		.then(() => {
+			const tmp = `${path}.tmp`;
+			writeFileSync(tmp, `${JSON.stringify(rows, null, 2)}\n`, 'utf8');
+			renameSync(tmp, path);
+		})
+		.catch(() => {});
+	return baselineChain;
+}
+
+async function fetchDeepseekReading(ctx: Context, apiKeyEnv: string): Promise<BalanceReading> {
+	const token = await bearer(ctx, apiKeyEnv);
+	if (!token) throw new Error('DEEPSEEK credential empty');
+	const response = await fetch(DEEPSEEK_BALANCE_URL, {
+		headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+		signal: AbortSignal.timeout(15_000),
+	});
+	if (!response.ok) throw new Error(`deepseek /user/balance HTTP ${response.status}`);
+	const body = (await response.json()) as Record<string, unknown>;
+	const infos = Array.isArray(body.balance_infos) ? body.balance_infos : [];
+	const row = (infos.find((x) => typeof x === 'object' && x !== null && (x as Record<string, unknown>).currency === 'CNY') ??
+		infos[0]) as Record<string, unknown> | undefined;
+	if (!row) throw new Error('deepseek balance_infos missing');
+	const current = asNumber(row.total_balance);
+	if (current === undefined) throw new Error('deepseek total_balance missing');
+	return { current, unit: typeof row.currency === 'string' ? row.currency : 'CNY' };
+}
+
+/**
+ * Collect a pay-as-you-go balance and maintain the "last recharge" baseline:
+ * a reading higher than the stored baseline means a top-up happened (or the
+ * first sight), so the baseline resets to that reading — remaining percent
+ * then equals current / lastRecharge and starts back at 100%.
+ */
+export async function collectBalance(ctx: Context, provider: string, apiKeyEnv: string, profile: string): Promise<QuotaSnapshot> {
+	if (!apiKeyEnv) return emptyQuota('no apiKeyEnv on this route');
+	let reading: BalanceReading;
+	try {
+		reading = await fetchDeepseekReading(ctx, apiKeyEnv);
+	} catch (error) {
+		return emptyQuota(`deepseek balance failed: ${String(error)}`);
+	}
+	const rows = readBaseline(profile);
+	const prev = rows[provider];
+	const lastRecharge = prev !== undefined && prev.lastRecharge >= reading.current ? prev.lastRecharge : reading.current;
+	if (lastRecharge === prev?.lastRecharge) {
+		// unchanged baseline; nothing to persist
+	} else {
+		rows[provider] = { lastRecharge, unit: reading.unit, at: Date.now() };
+		await persistBaseline(profile, rows);
+	}
+	return {
+		kind: 'balance',
+		windows: [],
+		balance: { current: reading.current, lastRecharge, unit: reading.unit },
+		reason: undefined,
+		updatedAt: Date.now(),
+	};
+}
+
+export async function collectQuota(ctx: Context, provider: string, apiKeyEnv: string | undefined, profile: string): Promise<QuotaSnapshot> {
 	if (!apiKeyEnv) return emptyQuota('no apiKeyEnv on this route');
 	if (provider === 'openai-codex') return fetchCodex(ctx, apiKeyEnv);
 	if (provider === 'kimi-coding') return fetchKimi(ctx, apiKeyEnv);
 	if (provider === 'zai') return fetchZhipu(ctx, apiKeyEnv);
 	if (provider === 'minimax-cn') return fetchMinimax(ctx, apiKeyEnv);
+	if (provider === 'deepseek-official') return collectBalance(ctx, provider, apiKeyEnv, profile);
 	if (provider === 'xai') {
 		return emptyQuota('xAI 5h/7d 走 grok.com gRPC 账单，尚未接入');
 	}

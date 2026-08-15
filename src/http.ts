@@ -43,7 +43,7 @@ async function buildState(ctx: Context, config: ModelSyncConfig): Promise<SyncSt
 	const providers: ProviderSnapshot[] = [];
 	for (const listing of listings) {
 		const apiKeyEnv = section?.providers?.[listing.id]?.apiKeyEnv;
-		const quota = await collectQuota(ctx, listing.id, apiKeyEnv);
+		const quota = await collectQuota(ctx, listing.id, apiKeyEnv, config.profile);
 		providers.push({
 			id: listing.id,
 			baseURL: listing.baseURL,
@@ -53,6 +53,17 @@ async function buildState(ctx: Context, config: ModelSyncConfig): Promise<SyncSt
 			lastError: listing.error,
 		});
 	}
+	// deepseek-official lives on the llm-deepseek route, not in llm-pi-ai
+	// providers, yet it is the pay-as-you-go API model users pay per call.
+	const deepseekSection = settings?.get(settingsNamespace('llm-deepseek')) as { apiKeyEnv?: string } | undefined;
+	providers.push({
+		id: 'deepseek-official',
+		baseURL: 'https://api.deepseek.com',
+		configuredIds: [],
+		discovered: [],
+		quota: await collectQuota(ctx, 'deepseek-official', deepseekSection?.apiKeyEnv ?? 'DEEPSEEK_API_KEY', config.profile),
+		lastError: undefined,
+	});
 	return {
 		plugins: MANAGED_PLUGIN_IDS.map((row) => ({
 			id: row.id,
