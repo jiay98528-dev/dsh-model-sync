@@ -118,6 +118,7 @@ test('client registers only the dedicated settings sidebar pages', () => {
 	assert.doesNotMatch(client, /settings\.plugin\.item/);
 	assert.match(client, /id: 'model-sync'/);
 	assert.match(client, /id: 'model-sync-usage'/);
-	assert.match(client, /return plugin\.id !== 'model-sync-usage'/);
+	assert.match(client, /className: 'msync-feature-row'/);
+	assert.match(client, /return plugin\.id !== 'model-sync' && plugin\.id !== 'model-sync-usage'/);
 	assert.match(client, /function toggleUsage\(enabled\)/);
 });
