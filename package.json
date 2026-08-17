@@ -1,6 +1,6 @@
 {
 	"name": "dsh-model-sync",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Write live provider model lists into DSH settings. Composer rings show 5h/7d plan windows or metered balance since the last top-up for the current session model.",
 	"type": "module",
 	"license": "MIT",
