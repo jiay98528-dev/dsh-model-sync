@@ -71,16 +71,22 @@ export interface SyncState {
 }
 
 export interface ModelSyncConfig {
+	enabled: boolean;
+	usageEnabled: boolean;
 	profile: string;
 	pollMs: number;
 }
 
 export const DEFAULT_CONFIG: ModelSyncConfig = {
+	enabled: true,
+	usageEnabled: true,
 	profile: 'web',
 	pollMs: 60_000,
 };
 
 export const Config = z.object({
+	enabled: z.boolean().default(true),
+	usageEnabled: z.boolean().default(true),
 	profile: z.string().default('web'),
 	pollMs: z.number().min(5_000).default(60_000),
 });
@@ -88,8 +94,9 @@ export const Config = z.object({
 export const HTTP_PREFIX = '/agentteam/model-sync';
 
 export const MANAGED_PLUGIN_IDS = [
-	{ id: 'sub-model-access', label: '订阅制模型接入', packageName: '@agentteam/sub-model-access' },
-	{ id: 'model-sync', label: '模型同步', packageName: 'dsh-model-sync' },
+	{ id: 'sub-model-access', entryId: 'sub-model-access', label: '订阅制模型接入', packageName: '@agentteam/sub-model-access', optional: true, toggle: 'loader', configKey: undefined },
+	{ id: 'model-sync', entryId: 'model-sync', label: '模型同步', packageName: 'dsh-model-sync', optional: false, toggle: 'feature', configKey: 'enabled' },
+	{ id: 'model-sync-usage', entryId: 'model-sync', label: '模型用量', packageName: 'dsh-model-sync', optional: false, toggle: 'feature', configKey: 'usageEnabled' },
 ] as const;
 
 /** Catalog defaults used when settings omit baseURL. */

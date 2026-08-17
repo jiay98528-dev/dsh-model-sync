@@ -7,11 +7,12 @@ import { applyModels, listAllProviders } from './discover.js';
 import {
 	HTTP_PREFIX,
 	MANAGED_PLUGIN_IDS,
+	emptyQuota,
 	type ModelSyncConfig,
 	type ProviderSnapshot,
 	type SyncState,
 } from './domain.js';
-import { readPluginEnabled, setEntryEnabled } from './patch.js';
+import { readPluginEnabled, setEntryEnabled, setEntryEnabledIfPresent } from './patch.js';
 import { collectQuota, resetBaseline } from './quota.js';
 
 interface WebServer {
@@ -43,13 +44,25 @@ function deepseekApiKeyEnv(ctx: Context): string {
 
 async function buildState(ctx: Context, config: ModelSyncConfig): Promise<SyncState> {
 	const enabled = readPluginEnabled(config.profile);
-	const listings = await listAllProviders(ctx);
+	const plugins = MANAGED_PLUGIN_IDS
+		.filter((row) => !row.optional || enabled[row.id] !== undefined)
+		.map((row) => ({
+			id: row.id,
+			label: row.label,
+			enabled: enabled[row.id] === true,
+		}));
+	const syncEnabled = enabled['model-sync'] === true;
+	const usageEnabled = enabled['model-sync-usage'] === true;
+	if (!syncEnabled && !usageEnabled) return { plugins, providers: [] };
+	const listings = await listAllProviders(ctx, syncEnabled);
 	const settings = ctx.get('settings');
 	const section = settings?.get(settingsNamespace('llm-pi-ai')) as { providers?: Record<string, { apiKeyEnv?: string }> } | undefined;
 	const providers: ProviderSnapshot[] = [];
 	for (const listing of listings) {
 		const apiKeyEnv = section?.providers?.[listing.id]?.apiKeyEnv;
-		const quota = await collectQuota(ctx, listing.id, apiKeyEnv, config.profile);
+		const quota = usageEnabled
+			? await collectQuota(ctx, listing.id, apiKeyEnv, config.profile)
+			: emptyQuota('');
 		providers.push({
 			id: listing.id,
 			baseURL: listing.baseURL,
@@ -61,22 +74,24 @@ async function buildState(ctx: Context, config: ModelSyncConfig): Promise<SyncSt
 	}
 	// deepseek-official lives on the llm-deepseek route, not in llm-pi-ai
 	// providers, yet it is the pay-as-you-go API model users pay per call.
-	providers.push({
-		id: 'deepseek-official',
-		baseURL: 'https://api.deepseek.com',
-		configuredIds: [],
-		discovered: [],
-		quota: await collectQuota(ctx, 'deepseek-official', deepseekApiKeyEnv(ctx), config.profile),
-		lastError: undefined,
-	});
+	if (usageEnabled) {
+		providers.push({
+			id: 'deepseek-official',
+			baseURL: 'https://api.deepseek.com',
+			configuredIds: [],
+			discovered: [],
+			quota: await collectQuota(ctx, 'deepseek-official', deepseekApiKeyEnv(ctx), config.profile),
+			lastError: undefined,
+		});
+	}
 	return {
-		plugins: MANAGED_PLUGIN_IDS.map((row) => ({
-			id: row.id,
-			label: row.label,
-			enabled: enabled[row.id] !== false,
-		})),
+		plugins,
 		providers,
 	};
+}
+
+function featureEnabled(config: ModelSyncConfig, id: 'model-sync' | 'model-sync-usage'): boolean {
+	return readPluginEnabled(config.profile)[id] === true;
 }
 
 export function registerHttp(ctx: Context, config: ModelSyncConfig): () => void {
@@ -101,6 +116,10 @@ export function registerHttp(ctx: Context, config: ModelSyncConfig): () => void 
 					return;
 				}
 				if (req.method === 'POST' && path === `${HTTP_PREFIX}/apply`) {
+					if (!featureEnabled(config, 'model-sync')) {
+						send(res, 409, { error: 'model-sync feature disabled' });
+						return;
+					}
 					const body = (await readJson(req)) as { provider?: string; models?: Array<{ id: string; name: string }> };
 					if (!body.provider || !Array.isArray(body.models)) {
 						send(res, 400, { error: 'provider and models[] required' });
@@ -116,15 +135,21 @@ export function registerHttp(ctx: Context, config: ModelSyncConfig): () => void 
 						send(res, 400, { error: 'id and enabled required' });
 						return;
 					}
-					if (!MANAGED_PLUGIN_IDS.some((row) => row.id === body.id)) {
+					const plugin = MANAGED_PLUGIN_IDS.find((row) => row.id === body.id);
+					if (!plugin) {
 						send(res, 400, { error: `unknown plugin ${body.id}` });
 						return;
 					}
-					setEntryEnabled(config.profile, body.id, body.enabled);
+					if (plugin.optional) setEntryEnabledIfPresent(config.profile, body.id, body.enabled);
+					else setEntryEnabled(config.profile, body.id, body.enabled);
 					send(res, 200, { ok: true, state: await buildState(ctx, config) });
 					return;
 				}
 				if (req.method === 'POST' && path === `${HTTP_PREFIX}/baseline-reset`) {
+					if (!featureEnabled(config, 'model-sync-usage')) {
+						send(res, 409, { error: 'model-sync usage feature disabled' });
+						return;
+					}
 					const body = (await readJson(req)) as { provider?: string };
 					if (!body.provider) {
 						send(res, 400, { error: 'provider required' });

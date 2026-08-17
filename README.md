@@ -53,6 +53,18 @@ Restart `dsh web`, refresh the page, open **Settings → Model Sync**. The plugi
 
 The package ships a cordis.patch.yml bundle patch (`dsh.bundle`) and declares `dsh.client.immediately: true`, so it takes effect on install with no manual config.
 
+## Feature switches
+
+The host plugin stays loaded when either built-in feature is disabled, so its API and both dedicated settings pages remain available. The pages are registered only in the main Settings sidebar, not duplicated under **Settings → Plugins**.
+
+| Control | `cordis.patch.yml` value | When disabled |
+|---|---|---|
+| Model Sync | `model-sync.config.enabled` | Stops live model discovery and model writes; Usage keeps working |
+| Model usage queries | `model-sync.config.usageEnabled` | Stops quota requests and baseline resets, and hides composer rings; Model Sync keeps working |
+| Optional `sub-model-access` | `sub-model-access.disabled` | Unloads only that optional plugin |
+
+`sub-model-access` is optional. If its bundle is not installed or does not provide a patch entry, its switch is hidden and no missing-entry error is raised. Missing required entries still fail normally.
+
 ## Usage
 
 ### Model Sync
@@ -60,7 +72,7 @@ The package ships a cordis.patch.yml bundle patch (`dsh.bundle`) and declares `d
 1. **Settings → Model Sync**.
 2. **Refresh** if the list is empty.
 3. Each card lists the provider id, `baseURL`, and model chips. A blue outline marks ids not in settings yet. **Apply N new models** writes them to `llm-pi-ai.providers.<id>.models`.
-4. The collapsed **Enable plugins** block toggles this plugin and the optional `sub-model-access`, writing the disabled flag in cordis.patch.yml. Takes effect live.
+4. Model Sync has its own full-width switch. When installed, `sub-model-access` appears separately under **Optional plugins** and writes the loader disabled flag in cordis.patch.yml.
 
 MiniMax, Kimi Coding, and OpenAI Codex have no OpenAI `/models` endpoint. The plugin uses the known catalog ids.
 
@@ -70,6 +82,7 @@ MiniMax, Kimi Coding, and OpenAI Codex have no OpenAI `/models` endpoint. The pl
 2. Each provider lists its 5-hour and 7-day windows, one row each, with remaining percent, vendor cumulative counts, a reset countdown, and a colored bar.
 3. Metered rows show `current / baseline`. The first sample becomes the baseline. To count spend from before the plugin was enabled, click **Use current balance as baseline**. The balance row also records when the baseline was set.
 4. The page auto-refreshes every 60 seconds. **Refresh** pulls immediately.
+5. **Model usage queries** can be disabled independently from the switch on this page; quota calls and composer rings stop while Model Sync keeps working.
 
 ### Composer rings
 
@@ -98,14 +111,38 @@ The DeepSeek metered baseline lives in `$DSH_HOME/profiles/<profile>/model-sync.
 - id: model-sync
   name: dsh-model-sync
   config:
+    enabled: true
+    usageEnabled: true
     profile: web
     pollMs: 60000
 ```
 
 | Field | Default | Meaning |
 |---|---|---|
+| `enabled` | `true` | Enable live model discovery and applying new model ids |
+| `usageEnabled` | `true` | Enable quota collection, the Usage page data, and composer rings |
 | `profile` | `web` | Which `$DSH_HOME/profiles/<name>` to read and write |
 | `pollMs` | `60000` | Poll interval parameter, minimum `5000`. Pages currently refresh quota every 60 seconds |
+
+### Recover from a legacy disabled override
+
+An older toggle implementation could write the following override, which unloads the host plugin and makes its settings pages and JSON API disappear:
+
+```yaml
+- id: model-sync
+  disabled: true
+```
+
+Replace it with feature-level configuration, then restart `dsh web`:
+
+```yaml
+- id: model-sync
+  config:
+    enabled: false
+    usageEnabled: true
+```
+
+After upgrading, the UI writes only `config.enabled` and `config.usageEnabled` for the built-in features. Loader-level `disabled` remains reserved for optional plugins.
 
 ## Notes
 

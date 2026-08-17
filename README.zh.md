@@ -53,6 +53,18 @@ dsh plugin --profile web add github:jiay98528-dev/dsh-model-sync
 
 包自带 cordis.patch.yml 补丁（`dsh.bundle`），客户端声明 `dsh.client.immediately: true`，装上即生效，不用手动改配置。
 
+## 功能开关
+
+关闭任一内置功能时，host 插件仍保持加载，因此 API 和两个独立设置页都会保留。这两个页面只注册在设置主侧栏，不会重复出现在 **设置 → 插件** 中。
+
+| 开关 | `cordis.patch.yml` 字段 | 关闭后的行为 |
+|---|---|---|
+| 模型同步 | `model-sync.config.enabled` | 停止在线发现和写入模型；用量功能继续工作 |
+| 模型用量查询 | `model-sync.config.usageEnabled` | 停止额度请求和基准重置，并隐藏输入框圆环；模型同步继续工作 |
+| 可选 `sub-model-access` | `sub-model-access.disabled` | 只卸载这个可选插件 |
+
+`sub-model-access` 是可选插件。未安装或 bundle 未提供对应 patch entry 时，界面会隐藏它的开关，也不会抛出 missing-entry 错误；必需 entry 缺失仍会正常报错。
+
 ## 使用
 
 ### 模型同步
@@ -60,7 +72,7 @@ dsh plugin --profile web add github:jiay98528-dev/dsh-model-sync
 1. 打开 **设置 → 模型同步**。
 2. 列表空就点 **刷新**。
 3. 每张卡片列出提供方 id、`baseURL` 和模型芯片。蓝框是 settings 里还没有的 id，点 **应用 N 个新模型** 写进 `llm-pi-ai.providers.<id>.models`。
-4. 折叠的 **插件启停** 开关本插件和可选的 `sub-model-access`，写 cordis.patch.yml 的 disabled 标志，热生效。
+4. “模型同步”使用独立的整行开关；安装了 `sub-model-access` 时，它会另外显示在 **可选插件** 中，并写入 cordis.patch.yml 的 loader disabled 标志。
 
 MiniMax、Kimi Coding、OpenAI Codex 没有 OpenAI `/models` 端点，插件用 catalog 里的已知 id。
 
@@ -70,6 +82,7 @@ MiniMax、Kimi Coding、OpenAI Codex 没有 OpenAI `/models` 端点，插件用 
 2. 每家列出 5 小时和 7 天窗口，各占一行，带剩余百分比、厂商累计次数、重置倒计时和彩色进度条。
 3. 按量行显示 `当前 / 基准`，首采把当时余额当基准。要把插件启用前已经花掉的部分算进百分比，点 **以当前余额为基准**，余额行还会记录基准时间。
 4. 页面每 60 秒自动刷新，也可以点 **刷新** 立即拉一次。
+5. 本页的“模型用量查询”开关可以独立关闭额度请求和输入框圆环，不影响模型同步功能。
 
 ### 对话圆环
 
@@ -98,14 +111,38 @@ DeepSeek 按量基准写在 `$DSH_HOME/profiles/<profile>/model-sync.baseline.js
 - id: model-sync
   name: dsh-model-sync
   config:
+    enabled: true
+    usageEnabled: true
     profile: web
     pollMs: 60000
 ```
 
 | 字段 | 默认 | 含义 |
 |---|---|---|
+| `enabled` | `true` | 启用模型发现和写入新模型 id |
+| `usageEnabled` | `true` | 启用额度采集、用量详情数据和输入框圆环 |
 | `profile` | `web` | 读写哪个 `$DSH_HOME/profiles/<name>` |
 | `pollMs` | `60000` | 轮询间隔参数，最小 `5000`。页面当前每 60 秒刷新额度 |
+
+### 从旧版 disabled 覆盖中恢复
+
+旧版开关可能写入下面的配置。它会卸载 host 插件，导致设置页和 JSON API 一起消失：
+
+```yaml
+- id: model-sync
+  disabled: true
+```
+
+请改成功能级配置，再重启 `dsh web`：
+
+```yaml
+- id: model-sync
+  config:
+    enabled: false
+    usageEnabled: true
+```
+
+升级后，两个内置功能只会写入 `config.enabled` 和 `config.usageEnabled`；loader 级 `disabled` 只用于可选插件。
 
 ## 说明
 
